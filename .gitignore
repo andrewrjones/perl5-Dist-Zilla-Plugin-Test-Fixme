@@ -3,3 +3,4 @@
 Dist-Zilla-Plugin-Test-Fixme-*
 .*redcar
 .DS_Store
+tmp
