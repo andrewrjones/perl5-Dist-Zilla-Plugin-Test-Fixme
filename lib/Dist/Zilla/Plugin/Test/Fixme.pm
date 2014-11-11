@@ -81,5 +81,8 @@ ___[ xt/release/fixme.t ]___
 use strict;
 use warnings;
 
+eval "use Test::Fixme";
+plan skip_all => 'Test::Fixme required to test for FIXMEs' if $@;
+
 use Test::Fixme;
 run_tests();
