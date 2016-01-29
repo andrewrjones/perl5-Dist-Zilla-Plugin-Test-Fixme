@@ -6,6 +6,49 @@ package Dist::Zilla::Plugin::Test::Fixme;
 # ABSTRACT: Check code for FIXMEs.
 use Moose;
 use Data::Section -setup;
+use Data::Dumper;
+
+has where => (
+    is => 'ro',
+    isa => 'Str | ArrayRef[Str]',
+    predicate => 'has_where',
+);
+
+has match => (
+    is => 'ro',
+    isa => 'Str | RegexpRef',
+    predicate => 'has_match',
+);
+
+has filename_match => (
+    is => 'ro',
+    isa => 'RegexpRef',
+    predicate => 'has_filename_match',
+);
+
+has manifest => (
+    is => 'ro',
+    isa => 'Str',
+    predicate => 'has_manifest',
+);
+
+has warn => (
+    is => 'ro',
+    predicate => 'has_warn',
+);
+
+has format => (
+    is => 'ro',
+    isa => 'Str',
+    trigger => sub { my($self,$format) = @_; die unless $format =~ /^(original|perl)$/; },
+    predicate => 'has_format',
+);
+
+has skip_all => (
+    is => 'ro',
+    predicate => 'has_skip_all',
+);
+
 with 'Dist::Zilla::Role::FileGatherer', 'Dist::Zilla::Role::TextTemplate';
 
 sub gather_files {
@@ -13,10 +56,24 @@ sub gather_files {
 
     require Dist::Zilla::File::InMemory;
 
+    local $Data::Dumper::Purity = 1;
+    local $Data::Dumper::Terse  = 1;
+    local $Data::Dumper::Indent = 0;
+
+    my $args = [];
+    push @$args, '    where          => ' . Dumper($self->where())          if $self->has_where();
+    push @$args, '    match          => ' . Dumper($self->match())          if $self->has_match();
+    push @$args, '    filename_match => ' . Dumper($self->filename_match()) if $self->has_filename_match();
+    push @$args, '    manifest       => ' . Dumper($self->manifest())       if $self->has_manifest();
+    push @$args, '    warn           => ' . Dumper($self->warn())           if $self->has_warn();
+    push @$args, '    format         => ' . Dumper($self->format())         if $self->has_format();
+    push @$args, '    skip_all       => ' . Dumper($self->skip_all())       if $self->has_skip_all();
+    $args = @$args ? "\n" . join(",\n", @$args) . "\n" : '';
+
     for my $filename (qw( xt/release/fixme.t )) {
         my $content = $self->fill_in_string(
             ${ $self->section_data($filename) },
-            { skiptests => '' },
+            { run_tests_args => $args, skiptests => '' },
         );
         $self->add_file(
             Dist::Zilla::File::InMemory->new(
@@ -47,16 +104,18 @@ In C<dist.ini>:
 
     [Test::Fixme]
 
+Optionally pass arguments to L<Test::Fixme::run_tests>:
+
+    [Test::Fixme]
+    where = lib
+    match = TODO
+
 =head1 DESCRIPTION
 
 This is an extension of L<Dist::Zilla::Plugin::InlineFiles>, providing the
 following file:
 
   xt/release/fixme.t - a standard Test::Fixme test
-
-=head1 TODO
-
-- Allow user to pass options to Test::Fixme
 
 =head1 ACKNOWLEDGMENTS
 
@@ -82,4 +141,4 @@ use strict;
 use warnings;
 
 use Test::Fixme;
-run_tests();
+run_tests({{ $run_tests_args }});
